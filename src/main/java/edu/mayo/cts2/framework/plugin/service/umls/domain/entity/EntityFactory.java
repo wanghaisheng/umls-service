@@ -1,23 +1,7 @@
 package edu.mayo.cts2.framework.plugin.service.umls.domain.entity;
 
-import java.util.List;
-
-import javax.annotation.Resource;
-
-import org.springframework.stereotype.Component;
-
-import edu.mayo.cts2.framework.model.core.CodeSystemReference;
-import edu.mayo.cts2.framework.model.core.CodeSystemVersionReference;
-import edu.mayo.cts2.framework.model.core.DescriptionInCodeSystem;
-import edu.mayo.cts2.framework.model.core.EntityReference;
-import edu.mayo.cts2.framework.model.core.LanguageReference;
-import edu.mayo.cts2.framework.model.core.NameAndMeaningReference;
-import edu.mayo.cts2.framework.model.core.URIAndEntityName;
-import edu.mayo.cts2.framework.model.entity.Designation;
-import edu.mayo.cts2.framework.model.entity.EntityDescription;
-import edu.mayo.cts2.framework.model.entity.EntityDirectoryEntry;
-import edu.mayo.cts2.framework.model.entity.EntityListEntry;
-import edu.mayo.cts2.framework.model.entity.NamedEntityDescription;
+import edu.mayo.cts2.framework.model.core.*;
+import edu.mayo.cts2.framework.model.entity.*;
 import edu.mayo.cts2.framework.model.entity.types.DesignationRole;
 import edu.mayo.cts2.framework.model.util.ModelUtils;
 import edu.mayo.cts2.framework.plugin.service.umls.domain.uri.CodeSystemUriHandler;
@@ -25,6 +9,10 @@ import edu.mayo.cts2.framework.plugin.service.umls.index.IndexableEntity.Descrip
 import edu.mayo.cts2.framework.plugin.service.umls.index.IndexedEntity;
 import edu.mayo.cts2.framework.plugin.service.umls.mapper.CodeDTO;
 import edu.mayo.cts2.framework.plugin.service.umls.mapper.ConceptDTO;
+import org.springframework.stereotype.Component;
+
+import javax.annotation.Resource;
+import java.util.List;
 
 @Component
 public class EntityFactory {
@@ -58,7 +46,7 @@ public class EntityFactory {
 		
 		namedEntity.addDesignation(designation);
 		namedEntity.setDescribingCodeSystemVersion(
-			this.buildCodeSystemVersionReference(sab));
+			this.buildCodeSystemVersionReference(sab, null));
 		
 		namedEntity.addEntityType(CONCEPT_TYPE);
 
@@ -93,7 +81,7 @@ public class EntityFactory {
 					namedEntity.setAbout(entityUriHandler.getUri(sab, name));
 					namedEntity.addEntityType(CONCEPT_TYPE);
 					namedEntity.setDescribingCodeSystemVersion(
-							this.buildCodeSystemVersionReference(sab));
+							this.buildCodeSystemVersionReference(sab, null));
 
 			}
 		
@@ -136,7 +124,7 @@ public class EntityFactory {
 
 					DescriptionInCodeSystem descInCs = new DescriptionInCodeSystem();
 					descInCs.setHref(entityUriHandler.getUri(sab, name));
-					CodeSystemVersionReference csvRef = buildCodeSystemVersionReference(sab);
+					CodeSystemVersionReference csvRef = buildCodeSystemVersionReference(sab, null);
 					descInCs.setDescribingCodeSystemVersion(csvRef);
 					descInCs.setDesignation(codeDto.getName());
 					entityR.addKnownEntityDescription(descInCs);
@@ -147,31 +135,13 @@ public class EntityFactory {
 		return entityR;
 	}
 	
-	/*
-	public EntityList createEntityList(List<CodeDTO> codeDtos){
-		EntityDescription ed = this.createEntity(codeDtos);
-		
-		if (ed == null)
-			return null;
-		
-		EntityListEntry ele = this.createEntityListEntry(ed);
-		if (ele == null)
-			return null;
-		
-		EntityList entityL = new EntityList();
-		entityL.addEntry(ele);
-		RESTResource rr = new RESTResource();
-		rr.setResourceURI(ele.getHref());
-		entityL.setHeading(rr);
-		return entityL;
-	}
-	*/
-	
 	public EntityDirectoryEntry createEntityDirectoryEntry(IndexedEntity indexedEntity){
 		EntityDirectoryEntry entry = new EntityDirectoryEntry();
 		
 		String sab = indexedEntity.getSab();
 		String name = indexedEntity.getName();
+		String vsab = indexedEntity.getVsab();
+		
 		entry.setName(ModelUtils.createScopedEntityName(name, sab));
 		
 		entry.setAbout(entityUriHandler.getUri(sab, name));
@@ -183,7 +153,7 @@ public class EntityFactory {
 		descriptionInCodeSystem.setDesignation(description.getValue());
 		descriptionInCodeSystem.
 			setDescribingCodeSystemVersion(
-				this.buildCodeSystemVersionReference(sab));
+				this.buildCodeSystemVersionReference(sab, vsab));
 		
 		entry.addKnownEntityDescription(descriptionInCodeSystem);
 		
@@ -197,6 +167,7 @@ public class EntityFactory {
 		
 		String sab = indexedEntity.getSab();
 		String name = indexedEntity.getName();
+		String vsab = indexedEntity.getVsab();
 		
 		EntityDescription ed = new EntityDescription();
 
@@ -207,7 +178,7 @@ public class EntityFactory {
 		descriptionInCodeSystem.setDesignation(description.getValue());
 		descriptionInCodeSystem.
 			setDescribingCodeSystemVersion(
-				this.buildCodeSystemVersionReference(sab));
+				this.buildCodeSystemVersionReference(sab, vsab));
 
 		
 		
@@ -217,30 +188,33 @@ public class EntityFactory {
 		
 		return entry;
 	}
-	
+
 	public EntityDescription createEntityDescription(IndexedEntity indexedEntity){
 		
 		String sab = indexedEntity.getSab();
 		String name = indexedEntity.getName();
+		String vsab = indexedEntity.getVsab();
 		
 		EntityDescription ed = new EntityDescription();
 
 		NamedEntityDescription namedEntity = new NamedEntityDescription();
 		
-		if ((sab == null)||(name == null))
+		if ((sab != null)&&(name != null))
 		{
 				namedEntity.setEntityID(ModelUtils.createScopedEntityName(name, sab));
 	
 				namedEntity.setAbout(entityUriHandler.getUri(sab, name));
 				namedEntity.addEntityType(CONCEPT_TYPE);
 				namedEntity.setDescribingCodeSystemVersion(
-						this.buildCodeSystemVersionReference(sab));
+						this.buildCodeSystemVersionReference(sab, vsab));
+				
+				//namedEntity.setDescribingCodeSystemVersion(describingCodeSystemVersion)
 		}
 
 		ed.setNamedEntity(namedEntity);
 		return ed;
 	}
-	
+
 	public EntityListEntry createEntityListEntry(EntityDescription ed){
 
 		if (ed == null)
@@ -255,9 +229,17 @@ public class EntityFactory {
 		return entry;
 	}
 	
-	private CodeSystemVersionReference buildCodeSystemVersionReference(String sab){
+	private CodeSystemVersionReference buildCodeSystemVersionReference(String sab, String vsab){
+		
+		if ((sab == null)&&(vsab == null))
+			return null;
+		
+		String vsabTemp = vsab;
+		if (vsabTemp == null)
+			vsabTemp = sab;
+		
 		NameAndMeaningReference versionRef = new NameAndMeaningReference();
-		versionRef.setContent(sab);
+		versionRef.setContent(vsabTemp);
 		versionRef.setUri(this.codeSystemUriHandler.getUri(sab));
 
 		CodeSystemReference codeSystemRef = new CodeSystemReference();

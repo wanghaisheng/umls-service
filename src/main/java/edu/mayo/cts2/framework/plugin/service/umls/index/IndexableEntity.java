@@ -8,6 +8,8 @@ public class IndexableEntity {
 	private String name;
 	
 	private String sab;
+
+    private String vsab;
 	
 	private List<Description> descriptions = new ArrayList<Description>();
 
@@ -35,7 +37,15 @@ public class IndexableEntity {
 		this.sab = sab;
 	}
 
-	public static class Description {
+    public String getVsab() {
+        return vsab;
+    }
+
+    public void setVsab(String vsab) {
+        this.vsab = vsab;
+    }
+
+    public static class Description {
 		
 		private String value;
 		
